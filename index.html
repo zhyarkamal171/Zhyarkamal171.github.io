@@ -3,49 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar & Friends</title>
+    <title>Zhyar's Animal Shop</title>
     <style>
-        :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1 { margin-bottom: 30px; color: #1a1a1a; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: #1a1a1a; margin-bottom: 40px; border-bottom: 3px solid #ffcc00; padding-bottom: 10px; }
         
-        /* The Grid Container */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 100%; max-width: 1000px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; width: 100%; max-width: 1100px; }
 
-        /* Individual Animal Cards */
-        .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); text-align: center; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
+        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); text-align: center; transition: 0.3s; border: 1px solid #eee; }
+        .card:hover { transform: scale(1.03); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
         
-        /* Image Styling */
-        img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background-color: #eee; }
+        img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; }
         
-        /* Text Styling */
-        .name { font-weight: bold; font-size: 1.2rem; text-transform: capitalize; color: #444; }
+        .name { font-weight: bold; font-size: 1.3rem; color: #222; margin-bottom: 5px; }
+        
+        /* Pricing & Descriptions */
+        .price-tag { background: #fff9e6; color: #d4a017; font-weight: bold; padding: 5px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 0.9rem; border: 1px solid #ffeeba; }
+        .special-note { color: #666; font-style: italic; font-size: 0.85rem; margin-top: 8px; display: block; }
     </style>
 </head>
 <body>
 
-    <h1>Animal Gallery</h1>
+    <h1>Special Animal Marketplace</h1>
 
     <div class="grid">
         <div class="card">
             <img src="lion.jpg.webp" alt="Lion">
             <div class="name">(barham)</div>
+            <div class="price-tag">0.99$</div>
         </div>
 
         <div class="card">
             <img src="cat.jpg.webp" alt="Cat">
             <div class="name">(zhyar)</div>
+            <div class="price-tag">FREE</div>
+            <span class="special-note">happy ending</span>
         </div>
 
         <div class="card">
             <img src="donkey.jpg.webp" alt="Donkey">
             <div class="name">(akar)</div>
+            <div class="price-tag">BA XORAESH ZARARTA</div>
         </div>
 
         <div class="card">
             <img src="dog.jpg.webp" alt="Dog">
             <div class="name">(raman)</div>
+            <div class="price-tag">SHAITAN</div>
         </div>
     </div>
 
