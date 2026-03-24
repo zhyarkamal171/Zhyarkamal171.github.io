@@ -59,16 +59,25 @@
 
     // 1. AUTH LOGIC
     async function signUp() {
-        const { error } = await sb.auth.signUp({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-        if (error) alert(error.message); else alert("Account created! Check your dashboard to confirm.");
+        const { error } = await sb.auth.signUp({ 
+            email: document.getElementById('email').value, 
+            password: document.getElementById('password').value 
+        });
+        if (error) alert(error.message); else alert("Check your Supabase dashboard to confirm the user!");
     }
 
     async function signIn() {
-        const { error } = await sb.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
+        const { error } = await sb.auth.signInWithPassword({ 
+            email: document.getElementById('email').value, 
+            password: document.getElementById('password').value 
+        });
         if (error) alert("Login Failed: " + error.message);
     }
 
-    async function signOut() { await sb.auth.signOut(); location.reload(); }
+    async function signOut() { 
+        await sb.auth.signOut(); 
+        location.reload(); 
+    }
 
     // 2. TRACK USER STATE
     sb.auth.onAuthStateChange((event, session) => {
@@ -79,12 +88,12 @@
             document.getElementById('admin-panel').classList.remove('hidden');
             document.getElementById('user-email').innerText = user.email;
         }
-        fetchItems(); // Always fetch items regardless of login
+        fetchItems(); 
     });
 
     // 3. DATABASE & DISPLAY LOGIC
     async function fetchItems() {
-        // Fetch products (Public access)
+        // Fetch products publicly
         const { data, error } = await sb.from('animals').select('*').order('id', { ascending: false });
         
         if (error) {
@@ -92,8 +101,9 @@
             return;
         }
 
-        // Check if current visitor is the admin
-        const { data: { user } } = await sb.auth.getUser();
+        // Get session to check if Admin is logged in
+        const { data: { session } } = await sb.auth.getSession();
+        const user = session?.user;
 
         const grid = document.getElementById('market-grid');
         if (!data || data.length === 0) {
@@ -124,12 +134,11 @@
         btn.innerText = "Uploading...";
         btn.disabled = true;
 
-        // Upload to Storage
         const fName = `${Date.now()}_${file.name}`;
         const { error: storageError } = await sb.storage.from('animal-images').upload(fName, file);
         
         if (storageError) {
-            alert("Upload failed: Check your Storage Policies! " + storageError.message);
+            alert("Upload failed: " + storageError.message);
             btn.innerText = "Upload Product";
             btn.disabled = false;
             return;
@@ -137,7 +146,6 @@
 
         const { data: url } = sb.storage.from('animal-images').getPublicUrl(fName);
 
-        // Insert into Database
         const { error: dbError } = await sb.from('animals').insert([{ name, price, img: url.publicUrl }]);
         
         if (dbError) {
@@ -158,7 +166,7 @@
         if (error) alert("Delete failed: " + error.message); else fetchItems();
     }
 
-    // Initial load for non-logged in users
+    // Initial load
     fetchItems();
 </script>
 </body>
