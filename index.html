@@ -80,7 +80,7 @@
         function render(items) {
             document.getElementById('market-grid').innerHTML = items.map(p => `
                 <div class="card" id="card-${p.id}">
-                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=Image+Format+Blocked'">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=Image+Not+Found'">
                     <div class="content">
                         <div class="view-mode">
                             <h3 id="v-name-${p.id}">${p.name}</h3>
@@ -131,44 +131,61 @@
                 document.getElementById(`v-name-${id}`).innerText = updates.name;
                 document.getElementById(`v-price-${id}`).innerText = updates.price;
                 document.getElementById(`v-note-${id}`).innerText = updates.note;
-                toggleEdit(id); // close edit mode
+                toggleEdit(id); 
             } else { alert("Error saving edits"); }
         }
 
         async function addProduct() {
             const btn = document.getElementById('upload-btn');
-            const file = document.getElementById('n-file').files[0];
+            const fileInput = document.getElementById('n-file');
+            const file = fileInput.files[0];
             const name = document.getElementById('n-name').value;
             
             if (!file || !name) return alert("Please select an image and enter a name!");
+            
             btn.innerText = "Uploading...";
+            btn.disabled = true;
             
             try {
-                // 1. Upload
+                // 1. Upload Image
                 const fName = `${Date.now()}_${file.name}`;
-                await sb.storage.from('animal-images').upload(fName, file);
+                const { error: uploadError } = await sb.storage.from('animal-images').upload(fName, file);
                 
-                // 2. Get URL
+                if (uploadError) throw uploadError;
+
+                // 2. Get Public URL
                 const { data: urlData } = sb.storage.from('animal-images').getPublicUrl(fName);
                 
                 // 3. Save to database
-                await sb.from('animals').insert([{
+                const { error: dbError } = await sb.from('animals').insert([{
                     name: name,
                     price: document.getElementById('n-price').value,
                     note: document.getElementById('n-note').value,
                     img: urlData.publicUrl
                 }]);
-                location.reload();
+                
+                if (dbError) throw dbError;
+
+                // 4. Success! Clear form and fetch new data WITHOUT reloading
+                document.getElementById('n-name').value = '';
+                document.getElementById('n-price').value = '';
+                document.getElementById('n-note').value = '';
+                fileInput.value = ''; // clear file picker
+                toggleAdd(); // hide form
+                fetchAnimals(); // Refresh the grid!
+                
             } catch (err) {
-                alert("Upload failed. Make sure your Storage Policy allows this file type!");
+                alert("Upload failed. Did you fix the Storage Policies? Error: " + err.message);
+            } finally {
                 btn.innerText = "Upload & Save";
+                btn.disabled = false;
             }
         }
 
         async function deleteItem(id) {
             if(confirm("Delete this animal?")) {
                 await sb.from('animals').delete().eq('id', id);
-                location.reload();
+                fetchAnimals(); // Refresh grid without reloading page
             }
         }
 
