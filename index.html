@@ -10,14 +10,14 @@
             --bg: #0f172a;
             --card-bg: #1e293b;
             --text: #f8fafc;
-            --primary: #22d3ee; /* Neon Blue */
+            --primary: #22d3ee;
             --secondary: #818cf8;
-            --accent: #f43f5e; /* Delete Red */
-            --success: #4ade80; /* Price Green */
+            --accent: #f43f5e;
+            --success: #4ade80;
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
@@ -29,8 +29,8 @@
 
         /* Modern Header */
         #admin-header {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             width: 100%;
             max-width: 1100px;
@@ -43,72 +43,41 @@
         }
 
         .flex-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .admin-group { display: flex; gap: 10px; align-items: center; }
 
-        /* Typography */
-        h1 { font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        /* Grid System */
+        /* Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
 
-        /* Modern Card Design */
-        .card {
-            background: var(--card-bg);
-            border-radius: 24px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-
-        .img-container { position: relative; width: 100%; height: 250px; overflow: hidden; }
-        img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .card:hover img { transform: scale(1.1); }
-
+        /* Card & Editing UI */
+        .card { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05); position: relative; }
+        img { width: 100%; height: 250px; object-fit: cover; }
         .content { padding: 24px; }
-        .content h3 { margin: 0; font-size: 1.5rem; letter-spacing: -0.025em; }
         
-        .price-tag {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 4px 12px;
-            background: rgba(74, 222, 128, 0.1);
-            color: var(--success);
-            border-radius: 99px;
-            font-weight: 700;
-            font-size: 1.2rem;
+        .edit-input { 
+            width: 100%; 
+            background: #334155; 
+            border: 1px solid var(--primary); 
+            color: white; 
+            margin-bottom: 8px; 
+            padding: 8px; 
+            border-radius: 8px; 
+            display: none; 
         }
 
-        .note { color: #94a3b8; margin: 15px 0; line-height: 1.6; }
-
-        /* Modern UI Controls */
-        input {
-            background: #334155;
-            border: 1px solid #475569;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input:focus { border-color: var(--primary); }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
+        /* Buttons */
+        .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: #000; }
-        .btn-primary:hover { opacity: 0.9; box-shadow: 0 0 15px var(--primary); }
+        .btn-save { background: var(--success); color: #000; display: none; }
+        .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
         .btn-danger { background: rgba(244, 63, 94, 0.1); color: var(--accent); border: 1px solid var(--accent); width: 100%; margin-top: 10px; display: none; }
-        .btn-danger:hover { background: var(--accent); color: white; }
 
+        .admin-active .admin-btn, .admin-active .edit-trigger { display: block; }
         .hidden { display: none !important; }
+        
+        .editing .view-mode { display: none; }
+        .editing .edit-input { display: block; }
+        .editing .btn-save { display: block; }
+        .editing .btn-edit-toggle { display: none; }
     </style>
 </head>
 <body id="page-body">
@@ -117,64 +86,64 @@
 
     <div id="admin-header">
         <div class="flex-row">
-            <span id="status" style="color: var(--primary); font-weight: bold; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.1em;">Live Catalog</span>
+            <span id="status" style="color: var(--primary); font-weight: bold; font-size: 0.8rem;">LIVE CATALOG</span>
+            
             <div id="login-box">
-                <input type="password" id="pass" placeholder="Admin Access">
-                <button class="btn btn-primary" onclick="login()">Enter</button>
+                <input type="password" id="pass" placeholder="Admin Pass" style="background:#0f172a; border:1px solid #334155; color:white; padding:8px; border-radius:8px;">
+                <button class="btn btn-primary" onclick="login()">Login</button>
             </div>
-            <div id="admin-controls" class="hidden">
-                <button class="btn btn-primary" onclick="toggleAdd()">+ Add Product</button>
-                <button class="btn" style="background:transparent; color: #94a3b8;" onclick="location.reload()">Logout</button>
+
+            <div id="admin-controls" class="hidden admin-group">
+                <button class="btn btn-primary" onclick="toggleAdd()">+ New Product</button>
+                <button class="btn btn-outline" onclick="location.reload()">Logout</button>
             </div>
         </div>
 
         <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #475569; padding-top:20px;">
-            <div class="flex-row" style="justify-content: center;">
-                <input type="text" id="n-name" placeholder="Item Name">
-                <input type="text" id="n-price" placeholder="Price (e.g. 50$)">
+            <div class="flex-row">
+                <input type="text" id="n-name" placeholder="Name">
+                <input type="text" id="n-price" placeholder="Price">
                 <input type="text" id="n-img" placeholder="Image URL">
-                <input type="text" id="n-note" placeholder="Note">
-                <button class="btn btn-primary" onclick="addProduct()">Upload to Market</button>
+                <input type="text" id="n-note" placeholder="Description">
+                <button class="btn btn-primary" onclick="addProduct()">Add to Market</button>
             </div>
         </div>
     </div>
 
-    <div class="grid" id="market-grid">
-        <p style="color: #94a3b8;">Syncing with cloud database...</p>
-    </div>
+    <div class="grid" id="market-grid">Loading marketplace...</div>
 
     <script>
         const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
         const SB_KEY = 'sb_publishable_wKV5wS-UdPucrYtT4D2sQQ_t7lbKiaq'; 
-
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
         async function fetchAnimals() {
-            try {
-                const { data, error } = await sb.from('animals').select('*');
-                if (error) throw error;
-                if (!data || data.length === 0) {
-                    document.getElementById('market-grid').innerHTML = "<p style='color:#94a3b8; grid-column: 1/-1; text-align:center;'>No items found in catalog.</p>";
-                } else {
-                    render(data);
-                }
-            } catch (err) {
-                document.getElementById('market-grid').innerHTML = "<p style='color:var(--accent);'>Error: " + err.message + "</p>";
-            }
+            const { data, error } = await sb.from('animals').select('*').order('id', { ascending: false });
+            if (!error) render(data);
         }
 
         function render(items) {
             const grid = document.getElementById('market-grid');
             grid.innerHTML = items.map(p => `
-                <div class="card">
-                    <div class="img-container">
-                        <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=Animal+Image'">
-                    </div>
+                <div class="card" id="card-${p.id}">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=No+Image'">
                     <div class="content">
-                        <h3>${p.name}</h3>
-                        <div class="price-tag">${p.price}</div>
-                        <p class="note">${p.note || 'No description provided.'}</p>
-                        <button class="btn btn-danger admin-btn" onclick="deleteItem(${p.id})">Remove Listing</button>
+                        <div class="view-mode">
+                            <h3 id="v-name-${p.id}">${p.name}</h3>
+                            <div style="color:var(--success); font-weight:bold; font-size:1.2rem; margin:10px 0;" id="v-price-${p.id}">${p.price}</div>
+                            <p style="color:#94a3b8" id="v-note-${p.id}">${p.note || ''}</p>
+                        </div>
+
+                        <input class="edit-input" id="i-name-${p.id}" value="${p.name}">
+                        <input class="edit-input" id="i-price-${p.id}" value="${p.price}">
+                        <input class="edit-input" id="i-img-${p.id}" value="${p.img}">
+                        <input class="edit-input" id="i-note-${p.id}" value="${p.note || ''}">
+
+                        <div class="admin-group" style="margin-top:15px;">
+                            <button class="btn btn-outline admin-btn btn-edit-toggle" style="display:none" onclick="toggleEditMode(${p.id})">Edit</button>
+                            <button class="btn btn-save" onclick="saveEdit(${p.id})">Save Changes</button>
+                            <button class="btn btn-danger admin-btn" style="display:none" onclick="deleteItem(${p.id})">Delete</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -185,28 +154,48 @@
                 document.getElementById('page-body').classList.add('admin-active');
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-controls').classList.remove('hidden');
-                document.getElementById('status').innerText = "Admin Authorized 🔓";
                 document.querySelectorAll('.admin-btn').forEach(b => b.style.display = 'block');
-            } else { alert("Access Denied"); }
+            }
+        }
+
+        function toggleEditMode(id) {
+            document.getElementById(`card-${id}`).classList.toggle('editing');
+        }
+
+        async function saveEdit(id) {
+            const updates = {
+                name: document.getElementById(`i-name-${id}`).value,
+                price: document.getElementById(`i-price-${id}`).value,
+                img: document.getElementById(`i-img-${id}`).value,
+                note: document.getElementById(`i-note-${id}`).value
+            };
+
+            const { error } = await sb.from('animals').update(updates).eq('id', id);
+            if (error) alert("Update failed");
+            else {
+                // Update visuals without refreshing
+                document.getElementById(`v-name-${id}`).innerText = updates.name;
+                document.getElementById(`v-price-${id}`).innerText = updates.price;
+                document.getElementById(`v-note-${id}`).innerText = updates.note;
+                toggleEditMode(id);
+            }
         }
 
         function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
 
         async function addProduct() {
-            const name = document.getElementById('n-name').value;
-            const price = document.getElementById('n-price').value;
-            const img = document.getElementById('n-img').value;
-            const note = document.getElementById('n-note').value;
-
-            if(!name || !price) return alert("Required fields missing");
-
-            const { error } = await sb.from('animals').insert([{ name, price, img, note }]);
-            if (error) alert(error.message);
-            else location.reload();
+            const entry = {
+                name: document.getElementById('n-name').value,
+                price: document.getElementById('n-price').value,
+                img: document.getElementById('n-img').value,
+                note: document.getElementById('n-note').value
+            };
+            await sb.from('animals').insert([entry]);
+            location.reload();
         }
 
         async function deleteItem(id) {
-            if(confirm("Permanently remove this listing?")) {
+            if(confirm("Delete this?")) {
                 await sb.from('animals').delete().eq('id', id);
                 location.reload();
             }
