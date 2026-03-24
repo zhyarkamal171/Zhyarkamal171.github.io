@@ -11,13 +11,16 @@
         .container { width: 100%; max-width: 1100px; }
         #auth-form, #admin-panel { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; width: 100%; }
-        .card { background: var(--card-bg); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .card { background: var(--card-bg); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
         img { width: 100%; height: 250px; object-fit: cover; background: #000; }
         .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; margin: 5px; }
         .btn-primary { background: var(--primary); color: #000; }
         .btn-danger { background: var(--accent); color: white; }
-        input { background: #334155; border: 1px solid #475569; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; width: calc(100% - 22px); }
+        input, textarea { background: #334155; border: 1px solid #475569; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; width: calc(100% - 22px); font-family: inherit; }
         .hidden { display: none !important; }
+        .price-tag { color: var(--success); font-size: 1.3rem; font-weight: bold; margin: 10px 0; }
+        .desc-text { color: #94a3b8; font-size: 0.95rem; margin-bottom: 15px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -31,10 +34,9 @@
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="password" placeholder="Password">
             <button class="btn btn-primary" onclick="signIn()">Login</button>
-            <button class="btn" style="background:transparent; color:white;" onclick="signUp()">Sign Up</button>
         </div>
         <div id="user-info" class="hidden">
-            <p>Admin: <b id="user-email"></b></p>
+            <p>Welcome back, <b id="user-email"></b></p>
             <button class="btn btn-danger" onclick="signOut()">Logout</button>
         </div>
     </div>
@@ -42,14 +44,15 @@
     <div id="admin-panel" class="hidden">
         <h3>+ Add New Product</h3>
         <input type="text" id="n-name" placeholder="Animal Name">
-        <input type="text" id="n-price" placeholder="Price (e.g. 100$)">
+        <input type="text" id="n-price" placeholder="Price (e.g. 500$)">
+        <textarea id="n-desc" placeholder="Write a short description..." rows="3"></textarea>
         <input type="file" id="n-file">
         <button class="btn btn-primary" id="up-btn" onclick="uploadItem()">Upload Product</button>
     </div>
 
-    <hr style="width:100%; border:0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+    <hr style="width:100%; border:0.5px solid rgba(255,255,255,0.1); margin: 30px 0;">
 
-    <div class="grid" id="market-grid">Loading catalog...</div>
+    <div class="grid" id="market-grid">Fetching catalog...</div>
 </div>
 
 <script>
@@ -57,15 +60,7 @@
     const SB_KEY = 'sb_publishable_wKV5wS-UdPucrYtT4D2sQQ_t7lbKiaq'; 
     const sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // 1. AUTH LOGIC
-    async function signUp() {
-        const { error } = await sb.auth.signUp({ 
-            email: document.getElementById('email').value, 
-            password: document.getElementById('password').value 
-        });
-        if (error) alert(error.message); else alert("Check your Supabase dashboard to confirm the user!");
-    }
-
+    // 1. LOGIN & LOGOUT
     async function signIn() {
         const { error } = await sb.auth.signInWithPassword({ 
             email: document.getElementById('email').value, 
@@ -79,66 +74,72 @@
         location.reload(); 
     }
 
-    // 2. TRACK USER STATE
-    sb.auth.onAuthStateChange((event, session) => {
+    // 2. DETECT AUTH AND SHOW BUTTONS
+    sb.auth.onAuthStateChange(async (event, session) => {
         const user = session?.user;
+        const authForm = document.getElementById('auth-form');
+        const userInfo = document.getElementById('user-info');
+        const adminPanel = document.getElementById('admin-panel');
+
         if (user) {
-            document.getElementById('auth-form').classList.add('hidden');
-            document.getElementById('user-info').classList.remove('hidden');
-            document.getElementById('admin-panel').classList.remove('hidden');
+            authForm.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            adminPanel.classList.remove('hidden');
             document.getElementById('user-email').innerText = user.email;
+        } else {
+            authForm.classList.remove('hidden');
+            userInfo.classList.add('hidden');
+            adminPanel.classList.add('hidden');
         }
+        // Force refresh grid to show/hide delete buttons
         fetchItems(); 
     });
 
-    // 3. DATABASE & DISPLAY LOGIC
+    // 3. SHOW PRODUCTS
     async function fetchItems() {
-        // Fetch products publicly
         const { data, error } = await sb.from('animals').select('*').order('id', { ascending: false });
-        
-        if (error) {
-            console.error("Fetch error:", error);
-            return;
-        }
+        if (error) return console.error(error);
 
-        // Get session to check if Admin is logged in
         const { data: { session } } = await sb.auth.getSession();
-        const user = session?.user;
+        const isAdmin = !!session?.user;
 
         const grid = document.getElementById('market-grid');
         if (!data || data.length === 0) {
-            grid.innerHTML = "<p>No products yet.</p>";
+            grid.innerHTML = "<p>The market is currently empty.</p>";
             return;
         }
 
         grid.innerHTML = data.map(item => `
             <div class="card">
-                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/400x250?text=Image+Access+Error'">
-                <div style="padding:15px">
-                    <h3>${item.name}</h3>
-                    <div style="color:var(--success); font-size: 1.2rem; font-weight: bold;">${item.price}</div>
-                    ${user ? `<button class="btn btn-danger" style="margin-top:10px" onclick="deleteItem(${item.id})">Delete Item</button>` : ''}
+                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/400x250?text=Image+Not+Found'">
+                <div style="padding:20px">
+                    <h2 style="margin:0">${item.name}</h2>
+                    <div class="price-tag">${item.price || 'Contact for Price'}</div>
+                    <p class="desc-text">${item.description || 'No description provided.'}</p>
+                    ${isAdmin ? `<button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete Item</button>` : ''}
                 </div>
             </div>
         `).join('');
     }
 
+    // 4. UPLOAD
     async function uploadItem() {
         const file = document.getElementById('n-file').files[0];
         const name = document.getElementById('n-name').value;
         const price = document.getElementById('n-price').value;
+        const desc = document.getElementById('n-desc').value;
         const btn = document.getElementById('up-btn');
 
-        if (!file || !name) return alert("Please add a name and an image.");
+        if (!file || !name) return alert("Name and Image are required!");
 
-        btn.innerText = "Uploading...";
+        btn.innerText = "Processing...";
         btn.disabled = true;
 
         const fName = `${Date.now()}_${file.name}`;
         const { error: storageError } = await sb.storage.from('animal-images').upload(fName, file);
         
         if (storageError) {
-            alert("Upload failed: " + storageError.message);
+            alert("Storage error: " + storageError.message);
             btn.innerText = "Upload Product";
             btn.disabled = false;
             return;
@@ -146,13 +147,18 @@
 
         const { data: url } = sb.storage.from('animal-images').getPublicUrl(fName);
 
-        const { error: dbError } = await sb.from('animals').insert([{ name, price, img: url.publicUrl }]);
+        const { error: dbError } = await sb.from('animals').insert([
+            { name, price, description: desc, img: url.publicUrl }
+        ]);
         
         if (dbError) {
             alert("Database error: " + dbError.message);
         } else {
+            // Clear inputs
             document.getElementById('n-name').value = "";
             document.getElementById('n-price').value = "";
+            document.getElementById('n-desc').value = "";
+            document.getElementById('n-file').value = "";
             fetchItems();
         }
 
@@ -161,12 +167,12 @@
     }
 
     async function deleteItem(id) {
-        if (!confirm("Are you sure?")) return;
+        if (!confirm("Delete this product permanently?")) return;
         const { error } = await sb.from('animals').delete().eq('id', id);
-        if (error) alert("Delete failed: " + error.message); else fetchItems();
+        if (error) alert("Error: " + error.message); else fetchItems();
     }
 
-    // Initial load
+    // Load on start
     fetchItems();
 </script>
 </body>
