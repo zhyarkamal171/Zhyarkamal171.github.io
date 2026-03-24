@@ -3,82 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Admin Market</title>
+    <title>Qa7bae Haraje</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 100%; max-width: 900px; }
-        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        img { width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
-        .price { font-weight: bold; color: green; font-size: 1.2rem; margin: 10px 0; }
-        
-        /* Admin Styles */
-        #admin-controls { margin-top: 50px; padding: 20px; background: #eee; border-radius: 10px; }
-        .hidden { display: none; }
-        .edit-input { width: 80%; padding: 5px; margin-top: 5px; }
-        .admin-badge { background: red; color: white; padding: 2px 5px; font-size: 0.7rem; border-radius: 3px; position: absolute; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%; max-width: 1000px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+        img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
+        .price { font-weight: bold; color: #2ecc71; font-size: 1.4rem; margin: 10px 0; }
+        .note { color: #666; font-style: italic; }
     </style>
 </head>
 <body>
 
-    <h1>Qa7ba xana</h1>
+    <h1>Zhyar's Live Marketplace</h1>
+    <p>Updating live from Google Sheets!</p>
 
     <div class="grid" id="market-grid">
-        <div class="card">
-            <img src="lion.jpg.webp">
-            <h3>(barham)</h3>
-            <div class="price" id="price-lion">0.99$</div>
-            <input type="text" class="edit-input hidden" id="input-lion" placeholder="New price...">
-        </div>
-
-        <div class="card">
-            <img src="cat.jpg">
-            <h3>(zhyar)</h3>
-            <div class="price" id="price-cat">FREE</div>
-            <input type="text" class="edit-input hidden" id="input-cat" placeholder="New price...">
-        </div>
-    </div>
-
-    <div id="admin-controls">
-        <div id="login-form">
-            <input type="password" id="pass-input" placeholder="Enter Admin Password">
-            <button onclick="checkPassword()">Admin Login</button>
-        </div>
-        <div id="edit-actions" class="hidden">
-            <p>✅ <strong>Admin Mode Active</strong></p>
-            <button onclick="saveChanges()">Save All Prices</button>
-            <button onclick="logout()">Logout</button>
-        </div>
+        <p>Loading animals...</p>
     </div>
 
     <script>
-        const SECRET_PASS = "zhyar123"; // This is your "password"
+        // PASTE YOUR PUBLISHED CSV LINK BELOW
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcTL-96ST5wFBOuGnxZW8JrVV5f9CioEwRQUM41aShAn9Dj0IYoIJlebtrm26tLeIWPtn9NSWT-KaQ/pub?gid=0&single=true&output=csv';
 
-        function checkPassword() {
-            const pass = document.getElementById('pass-input').value;
-            if (pass === SECRET_PASS) {
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('edit-actions').classList.remove('hidden');
-                // Show all edit boxes
-                document.querySelectorAll('.edit-input').forEach(el => el.classList.remove('hidden'));
-            } else {
-                alert("Wrong password, habibi!");
+        async function loadData() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const data = await response.text();
+                
+                // Parse CSV rows
+                const rows = data.split('\n').slice(1); // Skip the header row
+                const grid = document.getElementById('market-grid');
+                grid.innerHTML = ''; // Clear loading text
+
+                rows.forEach(row => {
+                    const columns = row.split(',');
+                    if (columns.length < 2) return; // Skip empty rows
+
+                    const [name, price, image, note] = columns;
+
+                    const card = `
+                        <div class="card">
+                            <img src="${image.trim()}" alt="${name}">
+                            <h3>${name}</h3>
+                            <div class="price">${price}</div>
+                            <div class="note">${note}</div>
+                        </div>
+                    `;
+                    grid.innerHTML += card;
+                });
+            } catch (error) {
+                console.error("Error loading sheet:", error);
+                document.getElementById('market-grid').innerHTML = "Failed to load data. Check your Sheet link!";
             }
         }
 
-        function saveChanges() {
-            // Update the display with whatever is in the inputs
-            const lionPrice = document.getElementById('input-lion').value;
-            const catPrice = document.getElementById('input-cat').value;
-
-            if(lionPrice) document.getElementById('price-lion').innerText = lionPrice;
-            if(catPrice) document.getElementById('price-cat').innerText = catPrice;
-
-            alert("Prices updated! (Note: Since there is no database yet, this will reset if you refresh the page).");
-        }
-
-        function logout() {
-            location.reload();
-        }
+        loadData();
     </script>
 </body>
 </html>
