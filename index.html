@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Secure Market</title>
+    <title>Zhyar's Premium Market</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; --primary: #22d3ee; --success: #4ade80; --accent: #f43f5e; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 1100px; }
         #auth-form, #admin-panel { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; width: 100%; }
         .card { background: var(--card-bg); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
-        img { width: 100%; height: 200px; object-fit: cover; }
+        img { width: 100%; height: 250px; object-fit: cover; background: #000; }
         .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; margin: 5px; }
         .btn-primary { background: var(--primary); color: #000; }
         .btn-danger { background: var(--accent); color: white; }
@@ -27,14 +27,14 @@
 
     <div id="auth-section">
         <div id="auth-form">
-            <h3>Admin Login</h3>
+            <h3>Admin Access</h3>
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="password" placeholder="Password">
             <button class="btn btn-primary" onclick="signIn()">Login</button>
             <button class="btn" style="background:transparent; color:white;" onclick="signUp()">Sign Up</button>
         </div>
         <div id="user-info" class="hidden">
-            <p>Logged in as: <b id="user-email"></b></p>
+            <p>Admin: <b id="user-email"></b></p>
             <button class="btn btn-danger" onclick="signOut()">Logout</button>
         </div>
     </div>
@@ -42,12 +42,14 @@
     <div id="admin-panel" class="hidden">
         <h3>+ Add New Product</h3>
         <input type="text" id="n-name" placeholder="Animal Name">
-        <input type="text" id="n-price" placeholder="Price">
+        <input type="text" id="n-price" placeholder="Price (e.g. 100$)">
         <input type="file" id="n-file">
         <button class="btn btn-primary" id="up-btn" onclick="uploadItem()">Upload Product</button>
     </div>
 
-    <div class="grid" id="market-grid">Loading...</div>
+    <hr style="width:100%; border:0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+
+    <div class="grid" id="market-grid">Loading catalog...</div>
 </div>
 
 <script>
@@ -55,20 +57,20 @@
     const SB_KEY = 'sb_publishable_wKV5wS-UdPucrYtT4D2sQQ_t7lbKiaq'; 
     const sb = supabase.createClient(SB_URL, SB_KEY);
 
-    // AUTH LOGIC
+    // 1. AUTH LOGIC
     async function signUp() {
         const { error } = await sb.auth.signUp({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-        if (error) alert(error.message); else alert("Check your email or try logging in!");
+        if (error) alert(error.message); else alert("Account created! Check your dashboard to confirm.");
     }
 
     async function signIn() {
         const { error } = await sb.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-        if (error) alert(error.message);
+        if (error) alert("Login Failed: " + error.message);
     }
 
-    async function signOut() { await sb.auth.signOut(); }
+    async function signOut() { await sb.auth.signOut(); location.reload(); }
 
-    // TRACK AUTH STATE
+    // 2. TRACK USER STATE
     sb.auth.onAuthStateChange((event, session) => {
         const user = session?.user;
         if (user) {
@@ -76,26 +78,36 @@
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('admin-panel').classList.remove('hidden');
             document.getElementById('user-email').innerText = user.email;
-        } else {
-            document.getElementById('auth-form').classList.remove('hidden');
-            document.getElementById('user-info').classList.add('hidden');
-            document.getElementById('admin-panel').classList.add('hidden');
         }
-        fetchItems(); // Refresh items to show/hide delete buttons
+        fetchItems(); // Always fetch items regardless of login
     });
 
-    // DATABASE LOGIC
+    // 3. DATABASE & DISPLAY LOGIC
     async function fetchItems() {
-        const { data } = await sb.from('animals').select('*').order('id', { ascending: false });
-        const user = (await sb.auth.getUser()).data.user;
+        // Fetch products (Public access)
+        const { data, error } = await sb.from('animals').select('*').order('id', { ascending: false });
         
-        document.getElementById('market-grid').innerHTML = data.map(item => `
+        if (error) {
+            console.error("Fetch error:", error);
+            return;
+        }
+
+        // Check if current visitor is the admin
+        const { data: { user } } = await sb.auth.getUser();
+
+        const grid = document.getElementById('market-grid');
+        if (!data || data.length === 0) {
+            grid.innerHTML = "<p>No products yet.</p>";
+            return;
+        }
+
+        grid.innerHTML = data.map(item => `
             <div class="card">
-                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/400x200?text=Fix+Storage+Policies'">
+                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/400x250?text=Image+Access+Error'">
                 <div style="padding:15px">
                     <h3>${item.name}</h3>
-                    <div style="color:var(--success)">${item.price}</div>
-                    ${user ? `<button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete</button>` : ''}
+                    <div style="color:var(--success); font-size: 1.2rem; font-weight: bold;">${item.price}</div>
+                    ${user ? `<button class="btn btn-danger" style="margin-top:10px" onclick="deleteItem(${item.id})">Delete Item</button>` : ''}
                 </div>
             </div>
         `).join('');
@@ -104,21 +116,49 @@
     async function uploadItem() {
         const file = document.getElementById('n-file').files[0];
         const name = document.getElementById('n-name').value;
-        if (!file || !name) return alert("Fill all fields");
+        const price = document.getElementById('n-price').value;
+        const btn = document.getElementById('up-btn');
 
+        if (!file || !name) return alert("Please add a name and an image.");
+
+        btn.innerText = "Uploading...";
+        btn.disabled = true;
+
+        // Upload to Storage
         const fName = `${Date.now()}_${file.name}`;
-        await sb.storage.from('animal-images').upload(fName, file);
+        const { error: storageError } = await sb.storage.from('animal-images').upload(fName, file);
+        
+        if (storageError) {
+            alert("Upload failed: Check your Storage Policies! " + storageError.message);
+            btn.innerText = "Upload Product";
+            btn.disabled = false;
+            return;
+        }
+
         const { data: url } = sb.storage.from('animal-images').getPublicUrl(fName);
 
-        const { error } = await sb.from('animals').insert([{ name, price: document.getElementById('n-price').value, img: url.publicUrl }]);
-        if (error) alert("Save failed: " + error.message); else fetchItems();
+        // Insert into Database
+        const { error: dbError } = await sb.from('animals').insert([{ name, price, img: url.publicUrl }]);
+        
+        if (dbError) {
+            alert("Database error: " + dbError.message);
+        } else {
+            document.getElementById('n-name').value = "";
+            document.getElementById('n-price').value = "";
+            fetchItems();
+        }
+
+        btn.innerText = "Upload Product";
+        btn.disabled = false;
     }
 
     async function deleteItem(id) {
-        await sb.from('animals').delete().eq('id', id);
-        fetchItems();
+        if (!confirm("Are you sure?")) return;
+        const { error } = await sb.from('animals').delete().eq('id', id);
+        if (error) alert("Delete failed: " + error.message); else fetchItems();
     }
 
+    // Initial load for non-logged in users
     fetchItems();
 </script>
 </body>
