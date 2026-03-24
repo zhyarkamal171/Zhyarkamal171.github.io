@@ -3,90 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Live Market</title>
+    <title>Zhyar's Live Marketplace</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        #admin-header { background: #333; color: white; width: 100%; max-width: 1000px; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        :root { --primary: #2ecc71; --dark: #333; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Admin Header */
+        #admin-header { background: var(--dark); color: white; width: 100%; max-width: 1000px; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        
+        /* Grid and Cards */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; width: 100%; max-width: 1000px; }
-        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center; }
-        img { width: 100%; height: 220px; object-fit: cover; }
-        .price { font-size: 1.4rem; color: #2ecc71; font-weight: bold; margin: 8px 0; }
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; position: relative; }
+        img { width: 100%; height: 220px; object-fit: cover; background: #ddd; }
+        .content { padding: 15px; text-align: center; }
+        
+        /* UI Elements */
+        .price { font-size: 1.4rem; color: var(--primary); font-weight: bold; margin: 8px 0; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-add { background: var(--primary); color: white; }
+        input { padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
+        
+        /* Utility */
         .hidden { display: none !important; }
-        .admin-active .edit-ui { display: block; }
-        .edit-ui { display: none; margin-top: 10px; }
-        input { margin: 5px; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
-        #error-message { color: red; background: #ffdada; padding: 10px; border-radius: 5px; margin-bottom: 20px; display: none; }
+        .admin-btn { background: #e74c3c; color: white; margin-top: 10px; font-size: 0.8rem; display: none; }
     </style>
 </head>
 <body id="page-body">
 
-    <div id="error-message"></div>
-
     <div id="admin-header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="flex-row">
             <span id="status">Market Live 🟢</span>
             <div id="login-box">
                 <input type="password" id="pass" placeholder="Admin Pass">
-                <button onclick="login()">Login</button>
+                <button class="btn" onclick="login()">Login</button>
             </div>
             <div id="admin-controls" class="hidden">
-                <button onclick="toggleAdd()">+ Add New</button>
-                <button onclick="location.reload()">Logout</button>
+                <button class="btn btn-add" onclick="toggleAdd()">+ Add New Product</button>
+                <button class="btn" onclick="location.reload()">Logout</button>
             </div>
         </div>
-        <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #555; padding-top:10px;">
-            <input type="text" id="n-name" placeholder="Name">
-            <input type="text" id="n-price" placeholder="Price">
-            <input type="text" id="n-img" placeholder="Image URL">
-            <input type="text" id="n-note" placeholder="Note">
-            <button onclick="addProduct()">Save to Database</button>
+
+        <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #555; padding-top:20px;">
+            <div class="flex-row">
+                <input type="text" id="n-name" placeholder="Name (e.g. Lion)">
+                <input type="text" id="n-price" placeholder="Price (e.g. 50$)">
+                <input type="text" id="n-img" placeholder="Image URL">
+                <input type="text" id="n-note" placeholder="Note/Description">
+                <button class="btn btn-add" onclick="addProduct()">Save to Cloud</button>
+            </div>
         </div>
     </div>
 
     <div class="grid" id="market-grid">
-        <p id="loading-text">Connecting to Marketplace...</p>
+        <p id="loading-msg">Connecting to Database...</p>
     </div>
 
     <script>
-        // 1. SET UP KEYS
+        // 1. INTEGRATED KEYS
         const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
-        // PASTE YOUR KEY INSIDE THE QUOTES BELOW
-        const SB_KEY = 'YOUR_ACTUAL_ANON_PUBLIC_KEY_HERE'; 
+        const SB_KEY = 'sb_publishable_wKV5wS-UdPucrYtT4D2sQQ_t7lbKiaq'; 
 
-        function showError(msg) {
-            const errDiv = document.getElementById('error-message');
-            errDiv.innerText = msg;
-            errDiv.style.display = 'block';
-            document.getElementById('loading-text').innerText = "Connection failed.";
-        }
+        const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        // 2. INITIALIZE CLIENT
-        let sb;
-        try {
-            if (SB_KEY.includes("YOUR_ACTUAL")) {
-                showError("Error: You haven't pasted your Supabase Anon Key yet!");
-            } else {
-                sb = supabase.createClient(SB_URL, SB_KEY);
-                fetchAnimals();
-            }
-        } catch (e) {
-            showError("System Error: " + e.message);
-        }
-
-        // 3. DATABASE FUNCTIONS
+        // 2. FETCH DATA
         async function fetchAnimals() {
             try {
                 const { data, error } = await sb.from('animals').select('*');
                 if (error) throw error;
                 
                 if (!data || data.length === 0) {
-                    document.getElementById('market-grid').innerHTML = "<p>The market is currently empty. Login to add items!</p>";
+                    document.getElementById('market-grid').innerHTML = "The market is empty. Login to add items!";
                 } else {
                     render(data);
                 }
             } catch (err) {
-                showError("Database Error: Is your table named 'animals'? " + err.message);
+                document.getElementById('market-grid').innerHTML = "Database Error: " + err.message;
             }
         }
 
@@ -94,28 +87,26 @@
             const grid = document.getElementById('market-grid');
             grid.innerHTML = items.map(p => `
                 <div class="card">
-                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
-                    <div style="padding:15px">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=Image+Not+Found'">
+                    <div class="content">
                         <h3>${p.name}</h3>
                         <div class="price">${p.price}</div>
                         <p>${p.note}</p>
-                        <button class="edit-ui" style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="deleteItem(${p.id})">Delete</button>
+                        <button class="btn admin-btn" onclick="deleteItem(${p.id})">Delete Item</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // 4. ADMIN LOGIC
+        // 3. ADMIN FUNCTIONS
         function login() {
             if(document.getElementById('pass').value === "zhyar123") {
                 document.getElementById('page-body').classList.add('admin-active');
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-controls').classList.remove('hidden');
-                // Show delete buttons
-                document.querySelectorAll('.edit-ui').forEach(b => b.style.display = 'block');
-            } else {
-                alert("Wrong password!");
-            }
+                document.getElementById('status').innerText = "Admin Mode: Online 🔓";
+                document.querySelectorAll('.admin-btn').forEach(b => b.style.display = 'inline-block');
+            } else { alert("Wrong password!"); }
         }
 
         function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
@@ -126,17 +117,21 @@
             const img = document.getElementById('n-img').value;
             const note = document.getElementById('n-note').value;
 
+            if(!name || !price) return alert("Please fill name and price");
+
             const { error } = await sb.from('animals').insert([{ name, price, img, note }]);
             if (error) alert("Error: " + error.message);
             else location.reload();
         }
 
         async function deleteItem(id) {
-            if(confirm("Delete this?")) {
+            if(confirm("Delete this animal from the market?")) {
                 await sb.from('animals').delete().eq('id', id);
                 location.reload();
             }
         }
+
+        fetchAnimals();
     </script>
 </body>
 </html>
