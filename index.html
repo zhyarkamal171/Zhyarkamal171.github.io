@@ -3,114 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Premium Market</title>
+    <title>Zhyar's Market | Direct Upload</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --text: #f8fafc;
-            --primary: #22d3ee;
-            --secondary: #818cf8;
-            --accent: #f43f5e;
-            --success: #4ade80;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Modern Header */
-        #admin-header {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 100%;
-            max-width: 1100px;
-            padding: 20px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            position: sticky;
-            top: 20px;
-            z-index: 100;
-        }
-
-        .flex-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .admin-group { display: flex; gap: 10px; align-items: center; }
-
-        /* Grid */
+        :root { --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; --primary: #22d3ee; --success: #4ade80; --accent: #f43f5e; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        #admin-header { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 1100px; padding: 20px; border-radius: 20px; margin-bottom: 30px; position: sticky; top: 20px; z-index: 100; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
-
-        /* Card & Editing UI */
-        .card { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05); position: relative; }
+        .card { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05); }
         img { width: 100%; height: 250px; object-fit: cover; }
-        .content { padding: 24px; }
-        
-        .edit-input { 
-            width: 100%; 
-            background: #334155; 
-            border: 1px solid var(--primary); 
-            color: white; 
-            margin-bottom: 8px; 
-            padding: 8px; 
-            border-radius: 8px; 
-            display: none; 
-        }
-
-        /* Buttons */
-        .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: var(--primary); color: #000; }
-        .btn-save { background: var(--success); color: #000; display: none; }
-        .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
-        .btn-danger { background: rgba(244, 63, 94, 0.1); color: var(--accent); border: 1px solid var(--accent); width: 100%; margin-top: 10px; display: none; }
-
-        .admin-active .admin-btn, .admin-active .edit-trigger { display: block; }
+        .content { padding: 20px; }
         .hidden { display: none !important; }
-        
+        .btn { padding: 10px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: #000; }
+        input[type="file"] { background: #334155; padding: 5px; border-radius: 8px; font-size: 0.8rem; }
+        .edit-input { width: 90%; background: #334155; border: 1px solid var(--primary); color: white; margin: 5px 0; padding: 8px; border-radius: 8px; display: none; }
+        .admin-active .admin-btn { display: inline-block; }
         .editing .view-mode { display: none; }
         .editing .edit-input { display: block; }
-        .editing .btn-save { display: block; }
-        .editing .btn-edit-toggle { display: none; }
     </style>
 </head>
 <body id="page-body">
 
-    <h1>Zhyar's Marketplace</h1>
+    <h1>Zhyar's Premium Market</h1>
 
     <div id="admin-header">
-        <div class="flex-row">
-            <span id="status" style="color: var(--primary); font-weight: bold; font-size: 0.8rem;">LIVE CATALOG</span>
-            
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color: var(--primary); font-weight:bold;">MANAGEMENT PORTAL</span>
             <div id="login-box">
-                <input type="password" id="pass" placeholder="Admin Pass" style="background:#0f172a; border:1px solid #334155; color:white; padding:8px; border-radius:8px;">
+                <input type="password" id="pass" placeholder="Pass" style="padding:8px; border-radius:8px; border:none;">
                 <button class="btn btn-primary" onclick="login()">Login</button>
             </div>
-
-            <div id="admin-controls" class="hidden admin-group">
+            <div id="admin-controls" class="hidden">
                 <button class="btn btn-primary" onclick="toggleAdd()">+ New Product</button>
-                <button class="btn btn-outline" onclick="location.reload()">Logout</button>
+                <button class="btn" style="background:transparent; color:white;" onclick="location.reload()">Logout</button>
             </div>
         </div>
 
-        <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #475569; padding-top:20px;">
-            <div class="flex-row">
-                <input type="text" id="n-name" placeholder="Name">
-                <input type="text" id="n-price" placeholder="Price">
-                <input type="text" id="n-img" placeholder="Image URL">
-                <input type="text" id="n-note" placeholder="Description">
-                <button class="btn btn-primary" onclick="addProduct()">Add to Market</button>
-            </div>
+        <div id="add-form" class="hidden" style="margin-top:20px; padding-top:20px; border-top:1px solid #444;">
+            <input type="text" id="n-name" placeholder="Name">
+            <input type="text" id="n-price" placeholder="Price">
+            <input type="text" id="n-note" placeholder="Note">
+            <label style="font-size:0.8rem;">Upload Image:</label>
+            <input type="file" id="n-file" accept="image/*">
+            <button class="btn btn-primary" id="upload-btn" onclick="addProduct()">Save Product</button>
         </div>
     </div>
 
-    <div class="grid" id="market-grid">Loading marketplace...</div>
+    <div class="grid" id="market-grid">Syncing database...</div>
 
     <script>
         const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
@@ -126,81 +66,66 @@
             const grid = document.getElementById('market-grid');
             grid.innerHTML = items.map(p => `
                 <div class="card" id="card-${p.id}">
-                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=No+Image'">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=Image+Error'">
                     <div class="content">
                         <div class="view-mode">
-                            <h3 id="v-name-${p.id}">${p.name}</h3>
-                            <div style="color:var(--success); font-weight:bold; font-size:1.2rem; margin:10px 0;" id="v-price-${p.id}">${p.price}</div>
-                            <p style="color:#94a3b8" id="v-note-${p.id}">${p.note || ''}</p>
+                            <h3>${p.name}</h3>
+                            <div style="color:var(--success); font-weight:bold; font-size:1.2rem;">${p.price}</div>
+                            <p style="color:#94a3b8">${p.note || ''}</p>
                         </div>
-
-                        <input class="edit-input" id="i-name-${p.id}" value="${p.name}">
-                        <input class="edit-input" id="i-price-${p.id}" value="${p.price}">
-                        <input class="edit-input" id="i-img-${p.id}" value="${p.img}">
-                        <input class="edit-input" id="i-note-${p.id}" value="${p.note || ''}">
-
-                        <div class="admin-group" style="margin-top:15px;">
-                            <button class="btn btn-outline admin-btn btn-edit-toggle" style="display:none" onclick="toggleEditMode(${p.id})">Edit</button>
-                            <button class="btn btn-save" onclick="saveEdit(${p.id})">Save Changes</button>
-                            <button class="btn btn-danger admin-btn" style="display:none" onclick="deleteItem(${p.id})">Delete</button>
+                        <div class="admin-controls" style="margin-top:10px;">
+                            <button class="btn btn-primary hidden admin-btn" onclick="deleteItem(${p.id})">Delete</button>
                         </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        function login() {
-            if(document.getElementById('pass').value === "zhyar123") {
-                document.getElementById('page-body').classList.add('admin-active');
-                document.getElementById('login-box').classList.add('hidden');
-                document.getElementById('admin-controls').classList.remove('hidden');
-                document.querySelectorAll('.admin-btn').forEach(b => b.style.display = 'block');
+        async function uploadImage(file) {
+            const fileName = `${Date.now()}_${file.name}`;
+            const { data, error } = await sb.storage.from('animal-images').upload(fileName, file);
+            if (error) throw error;
+            // Get public URL
+            const { data: urlData } = sb.storage.from('animal-images').getPublicUrl(fileName);
+            return urlData.publicUrl;
+        }
+
+        async function addProduct() {
+            const btn = document.getElementById('upload-btn');
+            const file = document.getElementById('n-file').files[0];
+            if (!file) return alert("Please select an image file first!");
+            
+            btn.innerText = "Uploading...";
+            btn.disabled = true;
+
+            try {
+                const imgUrl = await uploadImage(file);
+                const entry = {
+                    name: document.getElementById('n-name').value,
+                    price: document.getElementById('n-price').value,
+                    note: document.getElementById('n-note').value,
+                    img: imgUrl
+                };
+                const { error } = await sb.from('animals').insert([entry]);
+                if (error) throw error;
+                location.reload();
+            } catch (err) {
+                alert("Upload failed: " + err.message);
+                btn.innerText = "Save Product";
+                btn.disabled = false;
             }
         }
 
-        function toggleEditMode(id) {
-            document.getElementById(`card-${id}`).classList.toggle('editing');
-        }
-
-        async function saveEdit(id) {
-            const updates = {
-                name: document.getElementById(`i-name-${id}`).value,
-                price: document.getElementById(`i-price-${id}`).value,
-                img: document.getElementById(`i-img-${id}`).value,
-                note: document.getElementById(`i-note-${id}`).value
-            };
-
-            const { error } = await sb.from('animals').update(updates).eq('id', id);
-            if (error) alert("Update failed");
-            else {
-                // Update visuals without refreshing
-                document.getElementById(`v-name-${id}`).innerText = updates.name;
-                document.getElementById(`v-price-${id}`).innerText = updates.price;
-                document.getElementById(`v-note-${id}`).innerText = updates.note;
-                toggleEditMode(id);
+        function login() {
+            if(document.getElementById('pass').value === "zhyar123") {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-controls').classList.remove('hidden');
+                document.querySelectorAll('.admin-btn').forEach(b => b.classList.remove('hidden'));
             }
         }
 
         function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
-
-        async function addProduct() {
-            const entry = {
-                name: document.getElementById('n-name').value,
-                price: document.getElementById('n-price').value,
-                img: document.getElementById('n-img').value,
-                note: document.getElementById('n-note').value
-            };
-            await sb.from('animals').insert([entry]);
-            location.reload();
-        }
-
-        async function deleteItem(id) {
-            if(confirm("Delete this?")) {
-                await sb.from('animals').delete().eq('id', id);
-                location.reload();
-            }
-        }
-
+        async function deleteItem(id) { if(confirm("Delete?")) { await sb.from('animals').delete().eq('id', id); location.reload(); } }
         fetchAnimals();
     </script>
 </body>
