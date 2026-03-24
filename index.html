@@ -3,21 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Market | Fixed</title>
+    <title>Zhyar's Premium Market</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; --primary: #22d3ee; --success: #4ade80; }
+        :root { --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; --primary: #22d3ee; --success: #4ade80; --accent: #f43f5e; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        #admin-header { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 1100px; padding: 20px; border-radius: 20px; margin-bottom: 30px; }
+        #admin-header { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 1100px; padding: 20px; border-radius: 20px; margin-bottom: 30px; position: sticky; top: 20px; z-index: 100; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
-        .card { background: var(--card-bg); border-radius: 24px; overflow: hidden; padding-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.05); }
-        img { width: 100%; height: 250px; object-fit: cover; }
-        .btn { padding: 10px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; }
+        .card { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05); }
+        img { width: 100%; height: 250px; object-fit: cover; background: #334155; }
+        .content { padding: 20px; }
+        .price { color: var(--success); font-weight: bold; font-size: 1.4rem; margin: 10px 0; }
+        
+        .btn { padding: 10px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: #000; }
+        .btn-success { background: var(--success); color: #000; }
+        .btn-outline { background: transparent; border: 1px solid #475569; color: var(--primary); }
+        .btn-danger { background: rgba(244, 63, 94, 0.1); color: var(--accent); border: 1px solid var(--accent); }
+        
+        input { background: #334155; border: 1px solid #475569; color: white; padding: 10px; border-radius: 8px; margin: 5px; width: 90%; }
+        
         .hidden { display: none !important; }
-        .admin-only { display: none; }
-        .admin-active .admin-only { display: inline-block !important; }
-        input { background: #334155; border: 1px solid #475569; color: white; padding: 10px; border-radius: 8px; margin: 5px; }
+        
+        /* Admin UI Logic */
+        .admin-only { display: none; gap: 10px; margin-top: 15px; }
+        .admin-active .admin-only { display: flex !important; }
+        
+        /* Edit Mode Logic */
+        .edit-inputs { display: none; flex-direction: column; }
+        .editing .view-mode { display: none; }
+        .editing .edit-inputs { display: flex; }
+        .editing .btn-edit { display: none; }
+        .editing .btn-save { display: block !important; }
     </style>
 </head>
 <body id="page-body">
@@ -28,46 +45,60 @@
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="color: var(--primary); font-weight:bold;">LIVE CATALOG 🟢</span>
             <div id="login-box">
-                <input type="password" id="pass" placeholder="Pass">
+                <input type="password" id="pass" placeholder="Admin Pass" style="width: 150px;">
                 <button class="btn btn-primary" onclick="login()">Login</button>
             </div>
-            <div id="admin-controls" class="hidden">
-                <button class="btn btn-primary" onclick="document.getElementById('add-form').classList.toggle('hidden')">+ Add Product</button>
-                <button class="btn" style="background:transparent; color:white;" onclick="location.reload()">Logout</button>
+            <div id="admin-controls" class="hidden" style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="toggleAdd()">+ Add Product</button>
+                <button class="btn" style="background:transparent; color:#94a3b8;" onclick="location.reload()">Logout</button>
             </div>
         </div>
 
-        <div id="add-form" class="hidden" style="margin-top:20px; border-top:1px solid #444; padding-top:20px;">
-            <input type="text" id="n-name" placeholder="Name">
-            <input type="text" id="n-price" placeholder="Price">
-            <input type="text" id="n-note" placeholder="Note">
-            <input type="file" id="n-file" accept="image/*">
-            <button class="btn btn-primary" id="save-btn" onclick="addProduct()">Upload & Save</button>
+        <div id="add-form" class="hidden" style="margin-top:20px; padding-top:20px; border-top:1px solid #444;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                <input type="text" id="n-name" placeholder="Name" style="width: auto;">
+                <input type="text" id="n-price" placeholder="Price" style="width: auto;">
+                <input type="text" id="n-note" placeholder="Description" style="width: auto;">
+                <input type="file" id="n-file" accept="image/*" style="width: auto;">
+                <button class="btn btn-primary" id="upload-btn" onclick="addProduct()">Upload & Save</button>
+            </div>
         </div>
     </div>
 
     <div class="grid" id="market-grid">Loading items...</div>
 
     <script>
-        // Integrated Keys
         const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
         const SB_KEY = 'sb_publishable_wKV5wS-UdPucrYtT4D2sQQ_t7lbKiaq'; 
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        async function fetchItems() {
-            const { data, error } = await sb.from('animals').select('*');
+        async function fetchAnimals() {
+            const { data, error } = await sb.from('animals').select('*').order('id', { ascending: false });
             if (data) render(data);
         }
 
         function render(items) {
             document.getElementById('market-grid').innerHTML = items.map(p => `
-                <div class="card">
-                    <img src="${p.img}">
-                    <div style="padding:20px;">
-                        <h3>${p.name}</h3>
-                        <div style="color:var(--success); font-weight:bold;">${p.price}</div>
-                        <p>${p.note || ''}</p>
-                        <button class="btn admin-only" style="background:#e74c3c; color:white;" onclick="deleteItem(${p.id})">Delete</button>
+                <div class="card" id="card-${p.id}">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/400x300/1e293b/f8fafc?text=Image+Format+Blocked'">
+                    <div class="content">
+                        <div class="view-mode">
+                            <h3 id="v-name-${p.id}">${p.name}</h3>
+                            <div class="price" id="v-price-${p.id}">${p.price}</div>
+                            <p style="color:#94a3b8" id="v-note-${p.id}">${p.note || ''}</p>
+                        </div>
+                        
+                        <div class="edit-inputs">
+                            <input type="text" id="e-name-${p.id}" value="${p.name}">
+                            <input type="text" id="e-price-${p.id}" value="${p.price}">
+                            <input type="text" id="e-note-${p.id}" value="${p.note || ''}">
+                        </div>
+
+                        <div class="admin-only">
+                            <button class="btn btn-outline btn-edit" onclick="toggleEdit(${p.id})">Edit</button>
+                            <button class="btn btn-success btn-save hidden" onclick="saveEdit(${p.id})">Save</button>
+                            <button class="btn btn-danger" onclick="deleteItem(${p.id})">Delete</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -75,46 +106,73 @@
 
         function login() {
             if(document.getElementById('pass').value === "zhyar123") {
-                document.body.classList.add('admin-active');
+                document.getElementById('page-body').classList.add('admin-active');
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-controls').classList.remove('hidden');
-            }
+            } else { alert("Wrong password"); }
+        }
+
+        function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
+
+        function toggleEdit(id) {
+            document.getElementById(`card-${id}`).classList.toggle('editing');
+        }
+
+        async function saveEdit(id) {
+            const updates = {
+                name: document.getElementById(`e-name-${id}`).value,
+                price: document.getElementById(`e-price-${id}`).value,
+                note: document.getElementById(`e-note-${id}`).value
+            };
+
+            const { error } = await sb.from('animals').update(updates).eq('id', id);
+            if (!error) {
+                // Update text on screen without refreshing
+                document.getElementById(`v-name-${id}`).innerText = updates.name;
+                document.getElementById(`v-price-${id}`).innerText = updates.price;
+                document.getElementById(`v-note-${id}`).innerText = updates.note;
+                toggleEdit(id); // close edit mode
+            } else { alert("Error saving edits"); }
         }
 
         async function addProduct() {
+            const btn = document.getElementById('upload-btn');
             const file = document.getElementById('n-file').files[0];
-            const btn = document.getElementById('save-btn');
-            if(!file) return alert("Select an image!");
+            const name = document.getElementById('n-name').value;
             
-            btn.innerText = "Saving...";
+            if (!file || !name) return alert("Please select an image and enter a name!");
+            btn.innerText = "Uploading...";
             
             try {
-                // 1. Storage Upload
-                const fName = Date.now() + "_" + file.name;
+                // 1. Upload
+                const fName = `${Date.now()}_${file.name}`;
                 await sb.storage.from('animal-images').upload(fName, file);
+                
+                // 2. Get URL
                 const { data: urlData } = sb.storage.from('animal-images').getPublicUrl(fName);
                 
-                // 2. Database Insert
+                // 3. Save to database
                 await sb.from('animals').insert([{
-                    name: document.getElementById('n-name').value,
+                    name: name,
                     price: document.getElementById('n-price').value,
                     note: document.getElementById('n-note').value,
                     img: urlData.publicUrl
                 }]);
-                
                 location.reload();
-            } catch (e) {
-                alert("Check your Supabase Policies! Error: " + e.message);
+            } catch (err) {
+                alert("Upload failed. Make sure your Storage Policy allows this file type!");
                 btn.innerText = "Upload & Save";
             }
         }
 
         async function deleteItem(id) {
-            await sb.from('animals').delete().eq('id', id);
-            location.reload();
+            if(confirm("Delete this animal?")) {
+                await sb.from('animals').delete().eq('id', id);
+                location.reload();
+            }
         }
 
-        fetchItems();
+        fetchAnimals();
     </script>
 </body>
 </html>
