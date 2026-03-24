@@ -1,2 +1,0 @@
-# Zhyarkamal.github.io
-test
