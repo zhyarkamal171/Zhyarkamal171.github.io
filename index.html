@@ -3,61 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qa7bae Haraje</title>
+    <title>Zhyar's Admin Marketplace</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%; max-width: 1000px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-        img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
-        .price { font-weight: bold; color: #2ecc71; font-size: 1.4rem; margin: 10px 0; }
-        .note { color: #666; font-style: italic; }
+        :root { --primary: #2ecc71; --admin: #e74c3c; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Admin Bar */
+        #admin-bar { background: #333; color: white; width: 100%; max-width: 1000px; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .admin-status { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-save { background: var(--primary); color: white; margin-right: 10px; }
+        .btn-login { background: #555; color: white; }
+
+        /* Marketplace Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; width: 100%; max-width: 1000px; }
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; position: relative; border: 2px solid transparent; }
+        .admin-active .card { border-color: #ffeaa7; }
+        
+        img { width: 100%; height: 200px; object-fit: cover; }
+        .content { padding: 20px; text-align: center; }
+        
+        /* Inputs (Visible only in Admin Mode) */
+        input, textarea { width: 90%; margin-top: 5px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; display: none; font-family: inherit; }
+        .admin-active input, .admin-active textarea { display: inline-block; }
+        .admin-active h3, .admin-active .price, .admin-active .note { display: none; }
+
+        .price { font-size: 1.5rem; color: var(--primary); font-weight: bold; margin: 10px 0; }
+        .note { color: #777; font-style: italic; font-size: 0.9rem; }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body>
+<body id="main-body">
 
-    <h1>qa7ba xana</h1>
+    <h1>Zhyar's Marketplace</h1>
+
+    <div id="admin-bar">
+        <div class="admin-status" id="status-text">Public View 👁️</div>
+        <div>
+            <div id="login-zone">
+                <input type="password" id="admin-pass" placeholder="Password" style="display:inline-block; width: 120px;">
+                <button class="btn btn-login" onclick="login()">Login</button>
+            </div>
+            <div id="admin-zone" class="hidden">
+                <button class="btn btn-save" onclick="saveData()">Save Changes</button>
+                <button class="btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
 
     <div class="grid" id="market-grid">
-        <p>Loading animals...</p>
+        <p>Loading your stock...</p>
     </div>
 
     <script>
-        // PASTE YOUR PUBLISHED CSV LINK BELOW
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcTL-96ST5wFBOuGnxZW8JrVV5f9CioEwRQUM41aShAn9Dj0IYoIJlebtrm26tLeIWPtn9NSWT-KaQ/pub?gid=0&single=true&output=csv';
+        const SHEET_URL = 'YOUR_GOOGLE_SHEET_CSV_LINK_HERE';
+        const PASS = "zhyar123";
+        let products = [];
 
-        async function loadData() {
+        // 1. Fetch Data
+        async function loadItems() {
             try {
-                const response = await fetch(SHEET_URL);
-                const data = await response.text();
+                const res = await fetch(SHEET_URL);
+                const text = await res.text();
+                const rows = text.split('\n').slice(1);
                 
-                // Parse CSV rows
-                const rows = data.split('\n').slice(1); // Skip the header row
-                const grid = document.getElementById('market-grid');
-                grid.innerHTML = ''; // Clear loading text
-
-                rows.forEach(row => {
-                    const columns = row.split(',');
-                    if (columns.length < 2) return; // Skip empty rows
-
-                    const [name, price, image, note] = columns;
-
-                    const card = `
-                        <div class="card">
-                            <img src="${image.trim()}" alt="${name}">
-                            <h3>${name}</h3>
-                            <div class="price">${price}</div>
-                            <div class="note">${note}</div>
-                        </div>
-                    `;
-                    grid.innerHTML += card;
+                products = rows.map((row, index) => {
+                    const cols = row.split(',');
+                    return { id: index, name: cols[0], price: cols[1], img: cols[2], note: cols[3] };
                 });
-            } catch (error) {
-                console.error("Error loading sheet:", error);
-                document.getElementById('market-grid').innerHTML = "Failed to load data. Check your Sheet link!";
+                render();
+            } catch (e) { console.error("Error:", e); }
+        }
+
+        // 2. Render Cards
+        function render() {
+            const grid = document.getElementById('market-grid');
+            grid.innerHTML = products.map(p => `
+                <div class="card" id="card-${p.id}">
+                    <img src="${p.img}" alt="Product">
+                    <div class="content">
+                        <h3>${p.name}</h3>
+                        <input type="text" value="${p.name}" id="edit-name-${p.id}">
+                        
+                        <div class="price">${p.price}</div>
+                        <input type="text" value="${p.price}" id="edit-price-${p.id}">
+                        
+                        <div class="note">${p.note}</div>
+                        <textarea id="edit-note-${p.id}">${p.note}</textarea>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 3. Admin Logic
+        function login() {
+            if (document.getElementById('admin-pass').value === PASS) {
+                document.getElementById('main-body').classList.add('admin-active');
+                document.getElementById('login-zone').classList.add('hidden');
+                document.getElementById('admin-zone').classList.remove('hidden');
+                document.getElementById('status-text').innerText = "Admin Mode: ACTIVE 🔓";
+            } else {
+                alert("Wrong password!");
             }
         }
 
-        loadData();
+        function saveData() {
+            // In a real app, this sends data back to Google Sheets.
+            // For now, it updates the visual screen.
+            products.forEach(p => {
+                p.name = document.getElementById(`edit-name-${p.id}`).value;
+                p.price = document.getElementById(`edit-price-${p.id}`).value;
+                p.note = document.getElementById(`edit-note-${p.id}`).value;
+            });
+            alert("Local changes saved! To make these permanent, update your Google Sheet.");
+            render();
+            logout();
+        }
+
+        function logout() {
+            document.getElementById('main-body').classList.remove('admin-active');
+            document.getElementById('login-zone').classList.remove('hidden');
+            document.getElementById('admin-zone').classList.add('hidden');
+            document.getElementById('status-text').innerText = "Public View 👁️";
+        }
+
+        loadItems();
     </script>
 </body>
 </html>
