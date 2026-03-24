@@ -3,154 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhyar's Ultimate Market</title>
+    <title>Zhyar's Live Market (Supabase)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #2ecc71; --admin: #e74c3c; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        
-        /* Admin Header */
-        #admin-header { background: #333; color: white; width: 100%; max-width: 1000px; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .flex-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        
-        /* Add Product Form (Hidden by default) */
-        #add-product-form { background: #444; padding: 15px; border-radius: 8px; margin-top: 15px; display: none; border-left: 4px solid var(--primary); }
-        #add-product-form input { margin: 5px; padding: 8px; border-radius: 4px; border: none; }
-
-        /* Grid & Cards */
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        #admin-header { background: #333; color: white; width: 100%; max-width: 1000px; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; width: 100%; max-width: 1000px; }
-        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); position: relative; border: 2px solid transparent; }
-        .admin-active .card { border: 2px dashed #ff7675; }
-        
-        img { width: 100%; height: 220px; object-fit: cover; background: #ddd; }
-        .content { padding: 15px; text-align: center; }
-        
-        /* UI Elements */
-        .price { font-size: 1.4rem; color: var(--primary); font-weight: bold; margin: 8px 0; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-add { background: var(--primary); color: white; }
-        .btn-login { background: #555; color: white; }
-        .btn-danger { background: var(--admin); color: white; font-size: 0.7rem; margin-top: 10px; }
-
-        /* Admin-only inputs */
-        .edit-input { width: 90%; margin: 5px 0; padding: 6px; display: none; border: 1px solid #ccc; border-radius: 4px; }
-        .admin-active .edit-input { display: inline-block; }
-        .admin-active .view-text { display: none; }
-        
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center; }
+        img { width: 100%; height: 220px; object-fit: cover; }
+        .price { font-size: 1.4rem; color: #2ecc71; font-weight: bold; margin: 8px 0; }
         .hidden { display: none !important; }
+        .admin-active .edit-ui { display: block; }
+        .edit-ui { display: none; margin-top: 10px; }
+        input { margin: 5px; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
     </style>
 </head>
 <body id="page-body">
 
-    <h1>Zhyar's Animal Marketplace</h1>
-
     <div id="admin-header">
-        <div class="flex-row">
-            <span id="status">Public View 👁️</span>
+        <div style="display: flex; justify-content: space-between;">
+            <span id="status">Market Live 🟢</span>
             <div id="login-box">
-                <input type="password" id="pass" placeholder="Password" style="padding: 8px; border-radius: 4px;">
-                <button class="btn btn-login" onclick="login()">Admin Login</button>
+                <input type="password" id="pass" placeholder="Admin Pass">
+                <button onclick="login()">Login</button>
             </div>
             <div id="admin-controls" class="hidden">
-                <button class="btn btn-add" onclick="toggleAddForm()">+ Add Product</button>
-                <button class="btn" onclick="saveAll()">Save & Logout</button>
+                <button onclick="toggleAdd()">+ Add New</button>
+                <button onclick="location.reload()">Logout</button>
             </div>
         </div>
-
-        <div id="add-product-form">
-            <h4 style="margin-top:0">New Product Details:</h4>
-            <input type="text" id="new-name" placeholder="Name (e.g. barham)">
-            <input type="text" id="new-price" placeholder="Price (e.g. 1.99$)">
-            <input type="text" id="new-img" placeholder="Image URL">
-            <input type="text" id="new-note" placeholder="Description">
-            <button class="btn btn-add" onclick="addNewProduct()">Create</button>
+        <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #555; padding-top:10px;">
+            <input type="text" id="n-name" placeholder="Name">
+            <input type="text" id="n-price" placeholder="Price">
+            <input type="text" id="n-img" placeholder="Image URL">
+            <input type="text" id="n-note" placeholder="Note">
+            <button onclick="addProduct()">Save to Database</button>
         </div>
     </div>
 
-    <div class="grid" id="market-grid">
-        </div>
+    <div class="grid" id="market-grid">Loading...</div>
 
     <script>
-        const PASS = "zhyar123";
-        let products = JSON.parse(localStorage.getItem('myProducts')) || [
-            { id: 1, name: "susu", price: "25.00$", img: "lion.jpg.webp", note: "gaz agret" },
-            { id: 2, name: "barham", price: "-10$", img: "cat.jpg", note: "ba 3aebar naben" }
-        ];
+        // 1. INITIALIZE SUPABASE
+        const SB_URL = 'ebikjltcedkzaduuwixm';
+        const SB_KEY = 'ebikjltcedkzaduuwixm';
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        function render() {
+        // 2. FETCH DATA FROM DATABASE
+        async function fetchAnimals() {
+            const { data, error } = await supabase.from('animals').select('*');
+            if (error) console.log(error);
+            else render(data);
+        }
+
+        function render(items) {
             const grid = document.getElementById('market-grid');
-            grid.innerHTML = products.map(p => `
+            grid.innerHTML = items.map(p => `
                 <div class="card">
-                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
-                    <div class="content">
-                        <div class="view-text">
-                            <h3>${p.name}</h3>
-                            <div class="price">${p.price}</div>
-                            <p>${p.note}</p>
-                        </div>
-                        
-                        <input class="edit-input" type="text" value="${p.name}" onchange="updateVal(${p.id}, 'name', this.value)" placeholder="Name">
-                        <input class="edit-input" type="text" value="${p.price}" onchange="updateVal(${p.id}, 'price', this.value)" placeholder="Price">
-                        <input class="edit-input" type="text" value="${p.img}" onchange="updateVal(${p.id}, 'img', this.value)" placeholder="Image URL">
-                        <input class="edit-input" type="text" value="${p.note}" onchange="updateVal(${p.id}, 'note', this.value)" placeholder="Note">
-                        
-                        <button class="btn btn-danger edit-input" onclick="deleteProduct(${p.id})">Delete Product</button>
+                    <img src="${p.img}">
+                    <div style="padding:15px">
+                        <h3>${p.name}</h3>
+                        <div class="price">${p.price}</div>
+                        <p>${p.note}</p>
+                        <button class="edit-ui" style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="deleteItem(${p.id})">Delete</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // --- Logic Functions ---
-
+        // 3. ADMIN ACTIONS
         function login() {
-            if(document.getElementById('pass').value === PASS) {
+            if(document.getElementById('pass').value === "zhyar123") {
                 document.getElementById('page-body').classList.add('admin-active');
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-controls').classList.remove('hidden');
-                document.getElementById('status').innerText = "Admin Mode: ONLINE 🔓";
-            } else { alert("Access Denied"); }
-        }
-
-        function toggleAddForm() {
-            const form = document.getElementById('add-product-form');
-            form.style.display = form.style.display === 'block' ? 'none' : 'block';
-        }
-
-        function addNewProduct() {
-            const newP = {
-                id: Date.now(),
-                name: document.getElementById('new-name').value || "New Item",
-                price: document.getElementById('new-price').value || "0$",
-                img: document.getElementById('new-img').value || "",
-                note: document.getElementById('new-note').value || ""
-            };
-            products.push(newP);
-            saveToStorage();
-            toggleAddForm();
-            render();
-        }
-
-        function updateVal(id, field, value) {
-            const p = products.find(x => x.id === id);
-            if(p) p[field] = value;
-        }
-
-        function deleteProduct(id) {
-            if(confirm("Delete this?")) {
-                products = products.filter(x => x.id !== id);
-                render();
             }
         }
 
-        function saveToStorage() {
-            localStorage.setItem('myProducts', JSON.stringify(products));
+        function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
+
+        async function addProduct() {
+            const name = document.getElementById('n-name').value;
+            const price = document.getElementById('n-price').value;
+            const img = document.getElementById('n-img').value;
+            const note = document.getElementById('n-note').value;
+
+            const { error } = await supabase.from('animals').insert([{ name, price, img, note }]);
+            if (error) alert("Error adding item");
+            else location.reload();
         }
 
-        function saveAll() {
-            saveToStorage();
-            location.reload(); // Re-locks the admin view
+        async function deleteItem(id) {
+            if(confirm("Delete this?")) {
+                const { error } = await supabase.from('animals').delete().eq('id', id);
+                location.reload();
+            }
         }
 
-        render();
+        fetchAnimals();
     </script>
 </body>
 </html>
