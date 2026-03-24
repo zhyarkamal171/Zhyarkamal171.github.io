@@ -1,92 +1,142 @@
-<script>
-    // 1. INITIALIZE SUPABASE
-    // I have plugged in your Project ID below. 
-    // PLEASE PASTE YOUR ANON KEY FROM SUPABASE SETTINGS -> API
-    const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
-    const SB_KEY = 'PASTE_YOUR_ANON_PUBLIC_KEY_HERE'; 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhyar's Live Market</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        #admin-header { background: #333; color: white; width: 100%; max-width: 1000px; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; width: 100%; max-width: 1000px; }
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center; }
+        img { width: 100%; height: 220px; object-fit: cover; }
+        .price { font-size: 1.4rem; color: #2ecc71; font-weight: bold; margin: 8px 0; }
+        .hidden { display: none !important; }
+        .admin-active .edit-ui { display: block; }
+        .edit-ui { display: none; margin-top: 10px; }
+        input { margin: 5px; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
+        #error-message { color: red; background: #ffdada; padding: 10px; border-radius: 5px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body id="page-body">
 
-    const sb = supabase.createClient(SB_URL, SB_KEY);
+    <div id="error-message"></div>
 
-    // 2. FETCH DATA FROM DATABASE
-    async function fetchAnimals() {
-        try {
-            console.log("Connecting to Supabase...");
-            const { data, error } = await sb.from('animals').select('*');
-            
-            if (error) {
-                console.error("Supabase Error:", error);
-                document.getElementById('market-grid').innerHTML = "Database Error: " + error.message;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                document.getElementById('market-grid').innerHTML = "The shop is empty! Login as Admin to add items.";
-                return;
-            }
-
-            render(data);
-        } catch (err) {
-            console.error("System Error:", err);
-            document.getElementById('market-grid').innerHTML = "Connection Failed. Check your API Key.";
-        }
-    }
-
-    function render(items) {
-        const grid = document.getElementById('market-grid');
-        grid.innerHTML = items.map(p => `
-            <div class="card">
-                <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
-                <div style="padding:15px">
-                    <h3>${p.name}</h3>
-                    <div class="price">${p.price}</div>
-                    <p>${p.note}</p>
-                    <button class="edit-ui" style="display:none; background:#e74c3c; color:white; border:none; padding:8px; cursor:pointer; border-radius:5px; margin-top:10px;" onclick="deleteItem(${p.id})">Delete Item</button>
-                </div>
+    <div id="admin-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="status">Market Live 🟢</span>
+            <div id="login-box">
+                <input type="password" id="pass" placeholder="Admin Pass">
+                <button onclick="login()">Login</button>
             </div>
-        `).join('');
-    }
+            <div id="admin-controls" class="hidden">
+                <button onclick="toggleAdd()">+ Add New</button>
+                <button onclick="location.reload()">Logout</button>
+            </div>
+        </div>
+        <div id="add-form" class="hidden" style="margin-top:20px; border-top: 1px solid #555; padding-top:10px;">
+            <input type="text" id="n-name" placeholder="Name">
+            <input type="text" id="n-price" placeholder="Price">
+            <input type="text" id="n-img" placeholder="Image URL">
+            <input type="text" id="n-note" placeholder="Note">
+            <button onclick="addProduct()">Save to Database</button>
+        </div>
+    </div>
 
-    // 3. ADMIN ACTIONS
-    function login() {
-        if(document.getElementById('pass').value === "zhyar123") {
-            document.getElementById('page-body').classList.add('admin-active');
-            document.getElementById('login-box').classList.add('hidden');
-            document.getElementById('admin-controls').classList.remove('hidden');
-            
-            // Show all delete buttons
-            document.querySelectorAll('.edit-ui').forEach(btn => btn.style.display = 'block');
-            document.getElementById('status').innerText = "Admin Mode: ONLINE 🔓";
-        } else {
-            alert("Wrong password!");
+    <div class="grid" id="market-grid">
+        <p id="loading-text">Connecting to Marketplace...</p>
+    </div>
+
+    <script>
+        // 1. SET UP KEYS
+        const SB_URL = 'https://ebikjltcedkzaduuwixm.supabase.co'; 
+        // PASTE YOUR KEY INSIDE THE QUOTES BELOW
+        const SB_KEY = 'YOUR_ACTUAL_ANON_PUBLIC_KEY_HERE'; 
+
+        function showError(msg) {
+            const errDiv = document.getElementById('error-message');
+            errDiv.innerText = msg;
+            errDiv.style.display = 'block';
+            document.getElementById('loading-text').innerText = "Connection failed.";
         }
-    }
 
-    function toggleAdd() { 
-        document.getElementById('add-form').classList.toggle('hidden'); 
-    }
-
-    async function addProduct() {
-        const name = document.getElementById('n-name').value;
-        const price = document.getElementById('n-price').value;
-        const img = document.getElementById('n-img').value;
-        const note = document.getElementById('n-note').value;
-
-        const { error } = await sb.from('animals').insert([{ name, price, img, note }]);
-        if (error) {
-            alert("Error adding item: " + error.message);
-        } else {
-            alert("Success!");
-            location.reload();
+        // 2. INITIALIZE CLIENT
+        let sb;
+        try {
+            if (SB_KEY.includes("YOUR_ACTUAL")) {
+                showError("Error: You haven't pasted your Supabase Anon Key yet!");
+            } else {
+                sb = supabase.createClient(SB_URL, SB_KEY);
+                fetchAnimals();
+            }
+        } catch (e) {
+            showError("System Error: " + e.message);
         }
-    }
 
-    async function deleteItem(id) {
-        if(confirm("Are you sure you want to delete this?")) {
-            const { error } = await sb.from('animals').delete().eq('id', id);
-            if (error) alert("Delete failed: " + error.message);
+        // 3. DATABASE FUNCTIONS
+        async function fetchAnimals() {
+            try {
+                const { data, error } = await sb.from('animals').select('*');
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    document.getElementById('market-grid').innerHTML = "<p>The market is currently empty. Login to add items!</p>";
+                } else {
+                    render(data);
+                }
+            } catch (err) {
+                showError("Database Error: Is your table named 'animals'? " + err.message);
+            }
+        }
+
+        function render(items) {
+            const grid = document.getElementById('market-grid');
+            grid.innerHTML = items.map(p => `
+                <div class="card">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                    <div style="padding:15px">
+                        <h3>${p.name}</h3>
+                        <div class="price">${p.price}</div>
+                        <p>${p.note}</p>
+                        <button class="edit-ui" style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="deleteItem(${p.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 4. ADMIN LOGIC
+        function login() {
+            if(document.getElementById('pass').value === "zhyar123") {
+                document.getElementById('page-body').classList.add('admin-active');
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-controls').classList.remove('hidden');
+                // Show delete buttons
+                document.querySelectorAll('.edit-ui').forEach(b => b.style.display = 'block');
+            } else {
+                alert("Wrong password!");
+            }
+        }
+
+        function toggleAdd() { document.getElementById('add-form').classList.toggle('hidden'); }
+
+        async function addProduct() {
+            const name = document.getElementById('n-name').value;
+            const price = document.getElementById('n-price').value;
+            const img = document.getElementById('n-img').value;
+            const note = document.getElementById('n-note').value;
+
+            const { error } = await sb.from('animals').insert([{ name, price, img, note }]);
+            if (error) alert("Error: " + error.message);
             else location.reload();
         }
-    }
 
-    fetchAnimals();
-</script>
+        async function deleteItem(id) {
+            if(confirm("Delete this?")) {
+                await sb.from('animals').delete().eq('id', id);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
